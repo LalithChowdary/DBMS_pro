@@ -31,7 +31,7 @@ def generate_soundex(token):
     code_cleaned = code_cleaned.replace('0', '')
     return (code_cleaned + '000')[:4]
 
-# --- Main Indexing Logic (All Features w/ POS Tagging) ---
+# --- Main Indexing Logic  ---
 
 class IndexBuilder:
     def __init__(self, corpus_path, data_path):
@@ -86,7 +86,7 @@ class IndexBuilder:
 
         original_tokens = word_tokenize(raw_content)
         
-        # IMPROVED: Use POS tagging to identify proper nouns for Soundex
+        # Use POS tagging to identify proper nouns for Soundex
         tagged_tokens = pos_tag(original_tokens)
 
         clean_terms = self._get_clean_terms(original_tokens)
@@ -110,7 +110,7 @@ class IndexBuilder:
             weight_squared_sum += weight ** 2
         self.doc_len[doc_id] = math.sqrt(weight_squared_sum)
 
-        # IMPROVED: Use the POS tag to update the Soundex map
+        # Use the POS tag to update the Soundex map
         for token, tag in tagged_tokens:
             if tag in ['NNP', 'NNPS']: # Proper Noun, singular or plural
                 soundex_code = generate_soundex(token)
