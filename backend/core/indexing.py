@@ -4,8 +4,9 @@ import math
 import pickle
 from collections import defaultdict
 from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords, wordnet
 from nltk.tokenize import word_tokenize
+from nltk import pos_tag
 
 # --- Soundex Implementation ---
 def get_soundex_code(char):
@@ -30,7 +31,7 @@ def generate_soundex(token):
     code_cleaned = code_cleaned.replace('0', '')
     return (code_cleaned + '000')[:4]
 
-# --- Main Indexing Logic (Step 2: Phonetic & Spelling) ---
+# --- Main Indexing Logic  ---
 
 class IndexBuilder:
     def __init__(self, corpus_path, data_path):
@@ -39,7 +40,7 @@ class IndexBuilder:
         self.stop_words = set(stopwords.words('english'))
         self.lemmatizer = WordNetLemmatizer()
 
-        # Core + Phonetic/Spelling structures
+        # All index structures
         self.doc_id_map = {}
         self.postings = defaultdict(list)
         self.doc_freq = defaultdict(int)
@@ -47,10 +48,11 @@ class IndexBuilder:
         self.term_dictionary = set()
         self.soundex_map = defaultdict(set)
         self.kgram_index = defaultdict(set)
+        self.synonym_map = {}
 
     def build_all_indexes(self):
-        """Orchestrates the core + phonetic/spelling indexing process."""
-        print("Starting Step 2: Phonetic & Spelling Indexing...")
+        """Orchestrates the entire indexing process with all features."""
+        print("Starting Full Index Build with POS Tagging...")
 
         self._assign_doc_ids()
         if not self.doc_id_map: return
@@ -59,11 +61,12 @@ class IndexBuilder:
             print(f"Processing document {doc_id}: {os.path.basename(doc_path)}")
             self._process_document(doc_id, doc_path)
 
-        print("Building auxiliary k-gram index...")
+        print("Building auxiliary indexes (k-gram and synonyms)...")
         self._build_kgram_index()
+        self._build_synonym_map()
 
         self._save_indexes()
-        print(f"Step 2 complete. Indexes saved to {self.data_path}")
+        print(f"Indexing complete. All indexes saved to {self.data_path}")
 
     def _assign_doc_ids(self):
         try:
@@ -82,6 +85,10 @@ class IndexBuilder:
             return
 
         original_tokens = word_tokenize(raw_content)
+        
+        # Use POS tagging to identify proper nouns for Soundex
+        tagged_tokens = pos_tag(original_tokens)
+
         clean_terms = self._get_clean_terms(original_tokens)
         
         local_postings = defaultdict(lambda: {'tf': 0, 'pos': []})
@@ -103,9 +110,9 @@ class IndexBuilder:
             weight_squared_sum += weight ** 2
         self.doc_len[doc_id] = math.sqrt(weight_squared_sum)
 
-        # ADDED: Update Soundex map
-        for token in original_tokens:
-            if token.isalpha() and token[0].isupper():
+        # Use the POS tag to update the Soundex map
+        for token, tag in tagged_tokens:
+            if tag in ['NNP', 'NNPS']: # Proper Noun, singular or plural
                 soundex_code = generate_soundex(token)
                 self.soundex_map[soundex_code].add(token.lower())
 
@@ -119,7 +126,6 @@ class IndexBuilder:
         bigrams = [f'{lemmatized_terms[i]}_{lemmatized_terms[i+1]}' for i in range(len(lemmatized_terms) - 1)]
         return lemmatized_terms + bigrams
 
-    # ADDED: Build K-Gram Index
     def _build_kgram_index(self, k=3):
         for term in self.term_dictionary:
             padded_term = f'${term}$'
@@ -127,6 +133,17 @@ class IndexBuilder:
             for i in range(len(padded_term) - k + 1):
                 kgram = padded_term[i:i+k]
                 self.kgram_index[kgram].add(term)
+
+    def _build_synonym_map(self):
+        for term in self.term_dictionary:
+            if '_' in term: continue
+            synsets = wordnet.synsets(term)
+            if synsets:
+                for lemma in synsets[0].lemmas():
+                    synonym = lemma.name().replace('_', ' ')
+                    if synonym.lower() != term.lower() and synonym not in self.stop_words:
+                        self.synonym_map.setdefault(term, []).append(synonym)
+                        break
 
     def _save_indexes(self):
         if not os.path.exists(self.data_path):
@@ -138,9 +155,9 @@ class IndexBuilder:
             "doc_freq": self.doc_freq,
             "doc_len": self.doc_len,
             "term_dictionary": list(self.term_dictionary),
-            # ADDED: Phonetic/Spelling indexes
             "soundex_map": {k: list(v) for k, v in self.soundex_map.items()},
             "kgram_index": {k: list(v) for k, v in self.kgram_index.items()},
+            "synonym_map": self.synonym_map,
         }
 
         for name, index in indexes.items():
@@ -151,7 +168,7 @@ if __name__ == '__main__':
     CORPUS_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'Corpus'))
     DATA_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
     
-    from core.utils import setup_nltk
+    from .utils import setup_nltk
     setup_nltk()
 
     builder = IndexBuilder(corpus_path=CORPUS_DIRECTORY, data_path=DATA_DIRECTORY)
