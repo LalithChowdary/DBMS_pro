@@ -2,6 +2,8 @@ import os
 import pickle
 from enum import Enum
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 
@@ -14,6 +16,18 @@ from core.ranking import process_and_expand_query, rank_results
 app = FastAPI(
     title="Vector Space Search Engine",
     description="A search engine based on the vector space model with advanced query processing."
+)
+
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Enum for API documentation
@@ -103,6 +117,13 @@ async def search(
         })
 
     return {"query": q, "results": results}
+
+@app.get("/files/{filename}")
+async def get_file(filename: str):
+    file_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Corpus')), filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 @app.post("/re-index", summary="Trigger the indexing process")
 async def re_index():
