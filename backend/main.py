@@ -112,7 +112,7 @@ async def search(
     for doc_id, score in ranked_doc_ids:
         results.append({
             "doc_id": doc_id,
-            "filename": os.path.basename(doc_id_map.get(doc_id, "Unknown File")),
+            "filename": os.path.basename(doc_id_map.get(doc_id, "Unknown File").replace('\\', '/')),
             "score": score
         })
 
