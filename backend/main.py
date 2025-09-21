@@ -1,5 +1,6 @@
 import os
 import pickle
+from enum import Enum
 from fastapi import FastAPI, HTTPException
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -14,6 +15,11 @@ app = FastAPI(
     title="Vector Space Search Engine",
     description="A search engine based on the vector space model with advanced query processing."
 )
+
+# Enum for API documentation
+class NoveltyFeatures(str, Enum):
+    true = "true"
+    false = "false"
 
 # Global variables to hold the loaded indexes
 INDEXES = {}
@@ -37,7 +43,6 @@ def load_indexes():
                 INDEXES[name] = pickle.load(f)
         except FileNotFoundError:
             print(f"Warning: Index file not found at {path}. Please run indexing.")
-            # Allow server to start, but search will fail.
             INDEXES[name] = {} if 'map' in name or 'postings' in name else []
     print("Indexes loaded successfully.")
 
@@ -51,11 +56,13 @@ async def startup_event():
 # --- API Endpoints ---
 
 @app.get("/search", summary="Perform a search query")
-async def search(q: str):
-    """
-    Performs a search query against the indexed documents.
-    - `q`: The search query string.
-    """
+async def search(
+    q: str,
+    use_spelling_correction: NoveltyFeatures = NoveltyFeatures.false,
+    use_synonyms: NoveltyFeatures = NoveltyFeatures.false,
+    use_soundex: NoveltyFeatures = NoveltyFeatures.false
+):
+    
     if not q:
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     
@@ -71,7 +78,10 @@ async def search(q: str):
         kgram_index=INDEXES["kgram_index"],
         term_dictionary=set(INDEXES["term_dictionary"]),
         soundex_map=INDEXES["soundex_map"],
-        generate_soundex_func=generate_soundex
+        generate_soundex_func=generate_soundex,
+        use_spelling_correction=(use_spelling_correction == NoveltyFeatures.true),
+        use_synonyms=(use_synonyms == NoveltyFeatures.true),
+        use_soundex=(use_soundex == NoveltyFeatures.true)
     )
 
     # 2. Rank the results
@@ -102,7 +112,7 @@ async def re_index():
     The server will be unresponsive until it completes.
     """
     try:
-        corpus_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Corpus'))
+        corpus_path = os.path.abspath(os.path.join(os.path.dirname(_file_), '..', 'Corpus'))
         builder = IndexBuilder(corpus_path=corpus_path, data_path=DATA_PATH)
         builder.build_all_indexes()
         
@@ -114,4 +124,4 @@ async def re_index():
         raise HTTPException(status_code=500, detail=f"An error occurred during indexing: {e}")
 
 # To run the server, use the command:
-# uvicorn main:app --reload --app-dir backend
+# uvicorn main:app --reload --app-dir backend

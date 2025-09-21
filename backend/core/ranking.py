@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 
-# --- Query Processing and Ranking Logic (Step 2: Advanced) ---
+# --- Query Processing and Ranking Logic  ---
 
 def jaccard_similarity(set1, set2):
     """Calculates Jaccard similarity between two sets."""
@@ -36,35 +36,59 @@ def get_spelling_correction(term, kgram_index, term_dictionary):
     
     return best_candidate
 
-def process_and_expand_query(query, lemmatizer, stop_words, synonym_map, kgram_index, term_dictionary, soundex_map, generate_soundex_func):
-    """Takes a raw query and returns a list of weighted terms after full processing."""
-    query_terms = query.lower().split()
+from nltk.tokenize import word_tokenize
+
+def process_and_expand_query(
+    query, lemmatizer, stop_words, synonym_map, kgram_index, term_dictionary, 
+    soundex_map, generate_soundex_func, use_spelling_correction=False, 
+    use_synonyms=False, use_soundex=False
+):
+   
     
-    processed_terms = []
-    for term in query_terms:
-        if term in stop_words: continue
-        
-        # Spelling Correction on the original term
-        corrected_term = get_spelling_correction(term, kgram_index, term_dictionary)
-        
-        # Lemmatization
-        lemma = lemmatizer.lemmatize(corrected_term)
-        processed_terms.append((lemma, 1.0)) # Original terms have full weight
+    # 1. Generate unigrams (lemmas), EXACTLY mirroring the indexing pipeline
+    raw_tokens = word_tokenize(query)
+    unigrams = []
+    # Keep track of the original words for casing-sensitive features like Soundex
+    original_words_for_unigrams = {}
+    for token in raw_tokens:
+        if token.isalpha() and token.lower() not in stop_words:
+            lemma = lemmatizer.lemmatize(token.lower())
+            unigrams.append(lemma)
+            if lemma not in original_words_for_unigrams:
+                original_words_for_unigrams[lemma] = token
 
-        # Synonym Expansion
-        synonyms = synonym_map.get(lemma, [])
-        for syn in synonyms:
-            processed_terms.append((syn, 0.5)) # Synonyms have half weight
+    # 2. Generate bigrams from the unigrams
+    bigrams = [f'{unigrams[i]}_{unigrams[i+1]}' for i in range(len(unigrams) - 1)]
 
-        # Soundex Expansion for capitalized original terms
-        if term and term[0].isupper():
-            soundex_code = generate_soundex_func(term)
+   
+    final_query_terms = []
+
+    # Add unigrams first
+    for unigram in unigrams:
+        term_to_process = unigram
+        # Apply spelling correction if enabled
+        if use_spelling_correction:
+            term_to_process = get_spelling_correction(unigram, kgram_index, term_dictionary)
+        final_query_terms.append(term_to_process)
+
+        # Apply synonym expansion if enabled
+        if use_synonyms:
+            synonyms = synonym_map.get(term_to_process, [])
+            
+            final_query_terms.extend(synonyms)
+
+        # Apply Soundex expansion if enabled
+        original_word = original_words_for_unigrams.get(unigram, "")
+        if use_soundex and original_word and original_word[0].isupper():
+            soundex_code = generate_soundex_func(original_word)
             similar_names = soundex_map.get(soundex_code, [])
-            for name in similar_names:
-                if name != term.lower():
-                    processed_terms.append((name, 0.7)) # Phonetic matches have a high weight
+            final_query_terms.extend([name for name in similar_names if name != original_word.lower()])
 
-    return processed_terms
+    # Add bigrams to the query vector
+    final_query_terms.extend(bigrams)
+
+   
+    return [(term, 1.0) for term in final_query_terms]
 
 def rank_results(query_terms, postings, doc_freq, doc_len):
     """Ranks documents based on the lnc.ltc scheme."""
