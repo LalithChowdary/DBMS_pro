@@ -2,6 +2,7 @@ import os
 import pickle
 from enum import Enum
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -116,6 +117,13 @@ async def search(
         })
 
     return {"query": q, "results": results}
+
+@app.get("/files/{filename}")
+async def get_file(filename: str):
+    file_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Corpus')), filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 @app.post("/re-index", summary="Trigger the indexing process")
 async def re_index():
