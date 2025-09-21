@@ -2,6 +2,7 @@ import os
 import pickle
 from enum import Enum
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 
@@ -14,6 +15,18 @@ from core.ranking import process_and_expand_query, rank_results
 app = FastAPI(
     title="Vector Space Search Engine",
     description="A search engine based on the vector space model with advanced query processing."
+)
+
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Enum for API documentation
