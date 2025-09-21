@@ -119,11 +119,18 @@ async def search(
     return {"query": q, "results": results}
 
 @app.get("/files/{filename}")
-async def get_file(filename: str):
+async def get_file(filename: str, q: str = None):
     file_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Corpus')), filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(file_path)
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    return {
+        "content": content,
+        "query": q
+    }
 
 @app.post("/re-index", summary="Trigger the indexing process")
 async def re_index():

@@ -116,7 +116,7 @@ export default function Search() {
             {results.map((result: any) => (
               <li key={result.doc_id} className="mb-4 p-4 border rounded text-black">
                 <p className="font-bold">
-                  <a href={`/files/${result.filename}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                  <a href={`/files/${result.filename}?q=${encodeURIComponent(query)}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
                     {result.filename}
                   </a>
                 </p>
