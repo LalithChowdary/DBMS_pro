@@ -72,6 +72,7 @@ async def startup_event():
 @app.get("/search", summary="Perform a search query")
 async def search(
     q: str,
+    k: int = 10,
     use_spelling_correction: NoveltyFeatures = NoveltyFeatures.false,
     use_synonyms: NoveltyFeatures = NoveltyFeatures.false,
     use_soundex: NoveltyFeatures = NoveltyFeatures.false
@@ -98,6 +99,16 @@ async def search(
         use_soundex=(use_soundex == NoveltyFeatures.true)
     )
 
+    # Normalize k to a reasonable range
+    try:
+        k = int(k)
+    except Exception:
+        k = 10
+    if k < 1:
+        k = 1
+    if k > 1000:
+        k = 1000
+
     # 2. Rank the results
     ranked_doc_ids = rank_results(
         query_terms=processed_query_terms,
@@ -106,10 +117,10 @@ async def search(
         doc_len=INDEXES["doc_len"]
     )
 
-    # 3. Format the results
+    # 3. Limit to top-k and format the results
     results = []
     doc_id_map = INDEXES["doc_id_map"]
-    for doc_id, score in ranked_doc_ids:
+    for doc_id, score in ranked_doc_ids[:k]:
         results.append({
             "doc_id": doc_id,
             "filename": os.path.basename(doc_id_map.get(doc_id, "Unknown File").replace('\\', '/')),

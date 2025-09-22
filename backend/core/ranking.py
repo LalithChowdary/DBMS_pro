@@ -125,7 +125,6 @@ def rank_results(query_terms, postings, doc_freq, doc_len):
         if doc_id in doc_len and doc_len[doc_id] > 0:
             doc_scores[doc_id] /= (doc_len[doc_id] * query_length)
 
-    # Sort results
+    # Sort results and return all ranked docs; caller can slice to desired k
     sorted_docs = sorted(doc_scores.items(), key=lambda item: (-item[1], item[0]))
-    
-    return sorted_docs[:10]
+    return sorted_docs
