@@ -37,7 +37,7 @@ export default function Search() {
         use_soundex: useSoundex.toString()
       });
 
-      const response = await fetch(`http://localhost:8000/search?${params.toString()}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/search?${params.toString()}`);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

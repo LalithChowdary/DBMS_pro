@@ -16,13 +16,12 @@ export default function FilePage() {
     if (filename) {
       const fetchFileContent = async () => {
         try {
-          const response = await fetch(`http://127.0.0.1:8000/files/${filename}?q=${query || ''}`);
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/files/${filename}`);
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Something went wrong');
+            throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
           }
-          const data = await response.json();
-          setContent(data.content);
+          const text = await response.text();
+          setContent(text);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
         } finally {
@@ -42,7 +41,6 @@ export default function FilePage() {
       .trim();
     
     // First try to highlight the complete phrase
-    let result = text;
     const phraseRegex = new RegExp(`\\b(${cleanQuery})\\b`, 'gi');
     const hasMatches = phraseRegex.test(text);
     
