@@ -16,7 +16,7 @@ export default function FilePage() {
     if (filename) {
       const fetchFileContent = async () => {
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/files/${filename}`);
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/files/${filename}.txt`);
           if (!response.ok) {
             throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
           }
