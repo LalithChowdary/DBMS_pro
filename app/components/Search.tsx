@@ -176,7 +176,7 @@ export default function Search() {
                 <div className="flex justify-between items-start">
                   <div>
                     <a
-                      href={`/files/${result.filename}?q=${encodeURIComponent(query)}`}
+                      href={`/files/${result.filename.replace('.txt', '')}?q=${encodeURIComponent(query)}`}
                       className="text-lg font-medium text-black hover:text-gray-600 transition-colors duration-300"
                     >
                       {result.filename.replace('.txt', '')}

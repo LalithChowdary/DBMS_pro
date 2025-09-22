@@ -131,7 +131,7 @@ async def search(
 
 @app.get("/files/{filename}")
 async def get_file(filename: str):
-    file_path = os.path.join(os.path.dirname(__file__), 'Corpus', filename)
+    file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Corpus', filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
