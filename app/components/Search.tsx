@@ -17,17 +17,21 @@ export default function Search() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setResults([]);
+    setCurrentPage(1);
 
     try {
       // Build query parameters for GET request
       const params = new URLSearchParams({
         q: query,
+        k: String(k),
         use_spelling_correction: useSpellingCorrection.toString(),
         use_synonyms: useSynonyms.toString(),
         use_soundex: useSoundex.toString()
@@ -41,10 +45,7 @@ export default function Search() {
       }
 
       const data = await response.json();
-      
-      // Limit results to k if specified
-      const limitedResults = data.results.slice(0, k);
-      setResults(limitedResults);
+      setResults(data.results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -53,12 +54,12 @@ export default function Search() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="max-w-4xl mx-auto">
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* Search Input */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="border border-gray-200 p-6">
           <div className="flex flex-col space-y-4">
-            <label htmlFor="search" className="text-lg font-medium text-gray-700">
+            <label htmlFor="search" className="text-sm font-medium text-black">
               Search Query
             </label>
             <input
@@ -66,7 +67,7 @@ export default function Search() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full p-4 border border-gray-300 focus:border-black focus:outline-none text-lg"
               placeholder="Enter your search query..."
               required
             />
@@ -74,60 +75,60 @@ export default function Search() {
         </div>
 
         {/* Search Options */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-medium text-gray-700 mb-4">Search Options</h3>
+        <div className="border border-gray-200 p-6">
+          <h3 className="text-sm font-medium text-black mb-6">Search Options</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-center space-x-3">
               <input
                 id="spelling-correction"
                 type="checkbox"
                 checked={useSpellingCorrection}
                 onChange={(e) => setUseSpellingCorrection(e.target.checked)}
-                className="w-4 h-4 text-purple-500 rounded focus:ring-purple-500"
+                className="w-4 h-4 border border-gray-300 focus:border-black"
               />
               <label htmlFor="spelling-correction" className="text-sm text-gray-600">
                 Spelling Correction
               </label>
             </div>
 
-            <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center space-x-3">
               <input
                 id="synonyms"
                 type="checkbox"
                 checked={useSynonyms}
                 onChange={(e) => setUseSynonyms(e.target.checked)}
-                className="w-4 h-4 text-purple-500 rounded focus:ring-purple-500"
+                className="w-4 h-4 border border-gray-300 focus:border-black"
               />
               <label htmlFor="synonyms" className="text-sm text-gray-600">
                 Synonyms
               </label>
             </div>
 
-            <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center space-x-3">
               <input
                 id="soundex"
                 type="checkbox"
                 checked={useSoundex}
                 onChange={(e) => setUseSoundex(e.target.checked)}
-                className="w-4 h-4 text-purple-500 rounded focus:ring-purple-500"
+                className="w-4 h-4 border border-gray-300 focus:border-black"
               />
               <label htmlFor="soundex" className="text-sm text-gray-600">
                 Soundex
               </label>
             </div>
 
-            <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center space-x-3">
               <input
                 type="number"
                 value={k}
                 onChange={(e) => setK(Number(e.target.value))}
-                className="w-20 p-2 border border-gray-300 rounded focus:ring-purple-500 focus:border-purple-500"
+                className="w-20 p-2 border border-gray-300 focus:border-black focus:outline-none"
                 min="1"
                 max="100"
               />
               <label className="text-sm text-gray-600">
-                Number of Results (K)
+                Number of Results
               </label>
             </div>
           </div>
@@ -138,7 +139,7 @@ export default function Search() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50"
+            className="bg-black hover:bg-gray-800 text-white font-medium py-3 px-12 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
           >
             {loading ? (
               <span className="flex items-center space-x-2">
@@ -156,38 +157,60 @@ export default function Search() {
       </form>
 
       {error && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600">{error}</p>
+        <div className="mt-6 p-4 border border-gray-300 bg-gray-50">
+          <p className="text-black">{error}</p>
         </div>
       )}
 
       {results.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Search Results</h2>
+        <div className="mt-12">
+          <h2 className="text-2xl font-light text-black mb-8">Search Results</h2>
           <div className="space-y-4">
-            {results.map((result) => (
+            {results
+              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+              .map((result) => (
               <div
                 key={result.doc_id}
-                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="border border-gray-200 p-6 hover:border-black transition-colors duration-300"
               >
                 <div className="flex justify-between items-start">
                   <div>
                     <a
                       href={`/files/${result.filename}?q=${encodeURIComponent(query)}`}
-                      className="text-lg font-semibold text-purple-600 hover:text-purple-700 transition-colors duration-300"
+                      className="text-lg font-medium text-black hover:text-gray-600 transition-colors duration-300"
                     >
                       {result.filename.replace('.txt', '')}
                     </a>
                     <div className="mt-2 flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">Relevance Score:</span>
-                      <div className="bg-purple-50 rounded px-2 py-1">
-                        <span className="text-purple-600 font-medium">{result.score.toFixed(4)}</span>
-                      </div>
+                      <span className="text-sm text-gray-500">Score:</span>
+                      <span className="text-sm text-black font-medium">{result.score.toFixed(4)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+          {/* Pagination */}
+          <div className="mt-8 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border border-gray-300 text-black disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <div className="text-sm text-gray-600">
+              Page {currentPage} of {Math.max(1, Math.ceil(results.length / pageSize))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(Math.ceil(results.length / pageSize), p + 1))}
+              disabled={currentPage >= Math.ceil(results.length / pageSize)}
+              className="px-4 py-2 border border-gray-300 text-black disabled:opacity-50"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
